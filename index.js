@@ -1,4 +1,3 @@
-
 var _ = require('underscore');
 var Backbone = require('backbone');
 var proxyCollection = require('backbone-collection-proxy');
@@ -9,9 +8,13 @@ function getPageLimits() {
   return [start, end];
 }
 
-function updatePagination() {
+function updatePagination(options) {
+  options = options || {};
   var pages = getPageLimits.call(this);
-  this._collection.reset(this.superset().slice(pages[0], pages[1]));
+  if(options.add){
+    return this._collection.add(this.superset().slice(pages[0], pages[1]));
+  }
+  return this._collection.reset(this.superset().slice(pages[0], pages[1]));
 }
 
 function updateNumPages() {
@@ -126,7 +129,7 @@ var methods = {
     return this;
   },
 
-  setPage: function(page) {
+  setPage: function(page, options) {
     // The lowest page we could set
     var lowerLimit = 0;
     // The highest page we could set
@@ -139,7 +142,7 @@ var methods = {
     page = page < 0 ? 0 : page;
 
     this._page = page;
-    updatePagination.call(this);
+    updatePagination.call(this, options);
 
     this.trigger('paginated:change:page', { page: page });
     return this;
@@ -201,6 +204,12 @@ var methods = {
     this.length = 0;
 
     this.trigger('paginated:destroy');
+  },
+
+  // infinite scroll
+  appendNextPage: function(){
+    this.setPage(this.getPage() + 1, {add:true});
+    return this;
   }
 
 };
@@ -209,4 +218,3 @@ var methods = {
 _.extend(Paginated.prototype, methods, Backbone.Events);
 
 module.exports =  Paginated;
-
