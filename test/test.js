@@ -1014,5 +1014,5 @@ describe('PaginatedCollection', function() {
 
   });
 
-});
 
+});

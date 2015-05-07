@@ -1,6 +1,13 @@
 module.exports = function (grunt) {
   grunt.initConfig({
 
+    watch: {
+      js: {
+        files: ['index.js', 'test/*.js'],
+        tasks: ['simplemocha']
+      }
+    },
+
     browserify: {
       basic: {
         src: [],
@@ -26,12 +33,33 @@ module.exports = function (grunt) {
         },
         browserifyMapping: '{"backbone":Backbone,"underscore":_}'
       }
+    },
+
+    // tests
+    simplemocha: {
+      options: {
+        globals: ['should'],
+        //timeout: 3000,
+        //ignoreLeaks: false,
+        //grep: '*-test',
+        //ui: 'bdd',
+        reporter: 'spec'
+      },
+
+      all: {
+        src: [
+          'test/setup.js',
+          'test/test.js'
+        ]
+      }
     }
 
   });
 
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-umd');
+  grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-simple-mocha');
 
-  grunt.registerTask('default', ['browserify', 'umd']);
+  grunt.registerTask('default', ['browserify', 'umd', 'simplemocha', 'watch']);
 };
