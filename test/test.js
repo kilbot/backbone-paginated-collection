@@ -624,16 +624,12 @@ describe('PaginatedCollection', function() {
     it('add event on add', function() {
       var model = new Backbone.Model({ n: 200 });
 
-      var called = false;
-      paginated.on('add', function(m, collection) {
-        assert(m === model);
-        assert(collection === paginated);
-        called = true;
-      });
+      var add = sinon.stub();
+      paginated.on('add', add);
 
       superset.unshift(model);
 
-      assert(called);
+      add.should.be.calledWith(model, paginated);
     });
 
     it('add and remove event when adding a model on a previous page', function() {
@@ -1036,22 +1032,40 @@ describe('PaginatedCollection', function() {
       assert(paginated.getNumPages() === 5);
     });
 
+    it('should update the current page if the model was there', function() {
+      // The first page should include models 0 - 14
+      var current = paginated.pluck('n');
+      current.should.eql(_.range(30));
+      paginated.length.should.eql(30);
+
+      var model = new Backbone.Model({ n: -1 });
+      superset.unshift(model);
+
+      // We should still have 6 pages
+      paginated.getNumPages().should.eql(6);
+
+      // The first page should now include models -1 - 13
+      var updated = paginated.pluck('n');
+      updated.should.eql(_.range(-1, 30));
+      paginated.length.should.eql(31);
+    });
+
     it('should remove a model from the infinite page', function() {
       var current = paginated.pluck('n');
-      assert(_.isEqual(current, _.range(30)));
-      assert(paginated.length === 30);
+      current.should.eql(_.range(30));
+      paginated.length.should.eql(30);
 
       var firstModel = superset.first();
-      assert(firstModel.get('n') === 0);
+      firstModel.get('n').should.eql(0);
       superset.remove(firstModel);
 
       // We should still have 6 pages
-      assert(paginated.getNumPages() === 6);
+      paginated.getNumPages().should.eql(6);
 
-      // The first page should now include models 1 - 30
+      // The first page should now include models 1 - 29
       var updated = paginated.pluck('n');
-      assert(_.isEqual(updated, _.range(1, 30)));
-      assert(paginated.length === 29);
+      updated.should.eql(_.range(1, 31));
+      paginated.length.should.eql(30);
     });
 
     it('should change the number of pages on remove', function() {
@@ -1082,6 +1096,141 @@ describe('PaginatedCollection', function() {
       // And adding one more should get us to 7
       superset.add({ n: 100 });
       assert(paginated.getNumPages() === 7);
+    });
+
+    it('reseting the superset should update everything', function() {
+      var newData = _.map(_.range(100, 150), function(i) { return { n: i }; });
+
+      superset.reset(newData);
+
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(4);
+      paginated.length.should.eql(15);
+
+      paginated.appendNextPage();
+
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(3);
+      paginated.length.should.eql(30);
+
+    });
+
+    it('add event on add', function() {
+      var model = new Backbone.Model({ n: 200 });
+
+      var add = sinon.stub();
+      paginated.on('add', add);
+
+      superset.unshift(model);
+
+      add.should.be.calledWith(model, paginated);
+    });
+
+    it('only add event when adding a model on a "previous" page', function() {
+      var model = new Backbone.Model({ n: 200 });
+
+      paginated.appendNextPage();
+
+      // we should have models 0-44
+      var current = paginated.pluck('n');
+      current.should.eql(_.range(45));
+
+      var addEvent = sinon.stub();
+      var removeEvent = sinon.stub();
+      var resetEvent = sinon.stub();
+
+      paginated.on('add',    addEvent);
+      paginated.on('remove', removeEvent);
+      paginated.on('reset',  resetEvent);
+
+      // Add the model in the 4th index. This will be on the first page.
+      superset.add(model, { at: 3 });
+
+      // The new set should be 0,1,2,200,...,44
+      var updated = _.range(45);
+      updated.splice(3, 0, 200);
+      paginated.pluck('n').should.eql(updated);
+
+      addEvent.should.be.calledWith(model, paginated);
+      removeEvent.should.not.be.called;
+      resetEvent.should.not.be.called;
+    });
+
+    it('no events when removing a model on a later page', function() {
+
+      paginated.appendNextPage();
+
+      // we should have models 0-44
+      var current = paginated.pluck('n');
+      current.should.eql(_.range(45));
+
+      var addEvent = sinon.stub();
+      var removeEvent = sinon.stub();
+      var resetEvent = sinon.stub();
+
+      paginated.on('add',    addEvent);
+      paginated.on('remove', removeEvent);
+      paginated.on('reset',  resetEvent);
+
+      // remove the first model from the superset
+      superset.remove(superset.last());
+
+      // The set should still be 30-44
+      var updated = paginated.pluck('n');
+      updated.should.eql(_.range(45));
+
+      addEvent.should.not.be.called;
+      removeEvent.should.not.be.called;
+      resetEvent.should.not.be.called;
+    });
+
+    it('remove event on remove', function() {
+      var model = superset.first();
+      var remove = sinon.stub();
+      paginated.on('remove', remove);
+      superset.remove(model);
+      remove.should.be.calledWith(model, paginated);
+    });
+
+    it("no remove event when removing a model not on the current page", function() {
+      var model = superset.last();
+      var remove = sinon.stub();
+      paginated.on('remove', remove);
+      superset.remove(model);
+      remove.should.not.be.called;
+    });
+
+    it('reset event', function() {
+      var newData = _.map(_.range(100, 150), function(i) { return { n: i }; });
+      var reset = sinon.stub();
+      paginated.on('reset', reset);
+      superset.reset(newData);
+      reset.should.be.calledWith(paginated);
+    });
+
+    it('`removePagination` should remove all pagination settings', function() {
+      paginated.removePagination();
+
+      paginated.getPerPage().should.eql(superset.length);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(1);
+      paginated.length.should.eql(superset.length);
+    });
+
+    it('should update when the original collection is sorted', function() {
+      var newData = _.map(_.range(100, 0, -1), function(i) { return { n: i }; });
+
+      // Reset the superset
+      superset.reset(newData);
+
+      // The paginated collection should hold the new data
+      paginated.toJSON().should.eql(newData.splice(0, 15));
+
+      // Let's reverse the sort
+      superset.comparator = 'n';
+      superset.sort();
+
+      paginated.pluck('n').should.eql(_.range(1, 16));
     });
 
   });

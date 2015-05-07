@@ -10,10 +10,12 @@ function getPageLimits() {
 
 function updatePagination() {
   var pages = getPageLimits.call(this);
-  if(this._infinitePage){
-    return this._collection.add(this.superset().slice(pages[0], pages[1]));
-  }
   return this._collection.reset(this.superset().slice(pages[0], pages[1]));
+}
+
+function infintePagination() {
+  var pages = getPageLimits.call(this);
+  return this._collection.add(this.superset().slice(pages[0], pages[1]));
 }
 
 function updateNumPages() {
@@ -73,6 +75,10 @@ function onAddRemove(model, collection, options) {
 
   var pages = getPageLimits.call(this);
   var start = pages[0], end = pages[1];
+
+  if(this._infinitePage > 0){
+    start = 0;
+  }
 
   // We are only adding and removing at most one model at a time,
   // so we can find just those two models. We could probably rewrite
@@ -212,10 +218,9 @@ var methods = {
 
   // infinite scroll
   appendNextPage: function(){
-    if( !this.hasNextPage() ){ return; }
     this._infinitePage = this._collection.length;
     this._page = 0;
-    updatePagination.call(this);
+    infintePagination.call(this);
     this.trigger('paginated:change:page', { page: 0 });
     return this;
   }
