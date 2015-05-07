@@ -16,15 +16,14 @@ var Backbone = require('backbone');
 var proxyCollection = require('backbone-collection-proxy');
 
 function getPageLimits() {
-  var start = this.getPage() * this.getPerPage();
+  var start = this._infinitePage || this.getPage() * this.getPerPage();
   var end = start + this.getPerPage();
   return [start, end];
 }
 
-function updatePagination(options) {
-  options = options || {};
+function updatePagination() {
   var pages = getPageLimits.call(this);
-  if(options.add){
+  if(this._infinitePage){
     return this._collection.add(this.superset().slice(pages[0], pages[1]));
   }
   return this._collection.reset(this.superset().slice(pages[0], pages[1]));
@@ -58,6 +57,7 @@ function updateNumPages() {
 }
 
 function recalculatePagination() {
+  this._infinitePage = 0;
   if (updateNumPages.call(this)) { return; }
   updatePagination.call(this);
 }
@@ -95,7 +95,9 @@ function onAddRemove(model, collection, options) {
   var toAdd = difference(this.superset().slice(start, end), this._collection.toArray());
   var toRemove = difference(this._collection.toArray(), this.superset().slice(start, end));
 
-  if (toRemove) {
+  var test = this._infinitePage > 0 && options.add;
+
+  if (toRemove && !test) {
     this._collection.remove(toRemove);
   }
 
@@ -114,6 +116,7 @@ function Paginated(superset, options) {
   // set, and expose limited functionality.
   this._collection = new Backbone.Collection(superset.toArray());
   this._page = 0;
+  this._infinitePage = 0;
   this.setPerPage((options && options.perPage) ? options.perPage : null);
 
   proxyCollection(this._collection, this);
@@ -142,7 +145,7 @@ var methods = {
     return this;
   },
 
-  setPage: function(page, options) {
+  setPage: function(page) {
     // The lowest page we could set
     var lowerLimit = 0;
     // The highest page we could set
@@ -155,7 +158,7 @@ var methods = {
     page = page < 0 ? 0 : page;
 
     this._page = page;
-    updatePagination.call(this, options);
+    updatePagination.call(this);
 
     this.trigger('paginated:change:page', { page: page });
     return this;
@@ -166,7 +169,7 @@ var methods = {
   },
 
   getNumPages: function() {
-    return this._totalPages;
+    return this._totalPages - Math.floor(this._infinitePage/this.getPerPage());
   },
 
   getPage: function() {
@@ -213,6 +216,7 @@ var methods = {
     this._collection.reset([]);
     this._superset = this._collection;
     this._page = 0;
+    this._infinitePage = 0;
     this._totalPages = 0;
     this.length = 0;
 
@@ -221,7 +225,11 @@ var methods = {
 
   // infinite scroll
   appendNextPage: function(){
-    this.setPage(this.getPage() + 1, {add:true});
+    if( !this.hasNextPage() ){ return; }
+    this._infinitePage = this._collection.length;
+    this._page = 0;
+    updatePagination.call(this);
+    this.trigger('paginated:change:page', { page: 0 });
     return this;
   }
 

@@ -2,7 +2,11 @@ module.exports = function (grunt) {
   grunt.initConfig({
 
     watch: {
-      js: {
+      build: {
+        files: ['index.js'],
+        tasks: ['browserify', 'umd']
+      },
+      test: {
         files: ['index.js', 'test/*.js'],
         tasks: ['simplemocha']
       }

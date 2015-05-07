@@ -10,7 +10,7 @@ module.exports = function(config) {
       'bower_components/backbone/backbone.js',
       'backbone-paginated-collection.js',
       'bower_components/chai/chai.js',
-      'test/**/*.js'
+      'test/test.js'
     ],
 
     frameworks: ["mocha"],

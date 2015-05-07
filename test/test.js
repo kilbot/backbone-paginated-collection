@@ -1014,5 +1014,77 @@ describe('PaginatedCollection', function() {
 
   });
 
+  describe('infinite scroll', function() {
+
+    beforeEach(function() {
+      superset = new Backbone.Collection(mockData);
+      paginated = new PaginatedCollection(superset, { perPage: 15 });
+
+      // append a page
+      paginated.appendNextPage();
+    });
+
+    it('should append the next page of data', function(){
+      assert(paginated.length === 30);
+      assert(paginated.getPage() === 0);
+      assert(paginated.getNumPages() === 6);
+
+      // append another page
+      paginated.appendNextPage();
+      assert(paginated.length === 45);
+      assert(paginated.getPage() === 0);
+      assert(paginated.getNumPages() === 5);
+    });
+
+    it('should remove a model from the infinite page', function() {
+      var current = paginated.pluck('n');
+      assert(_.isEqual(current, _.range(30)));
+      assert(paginated.length === 30);
+
+      var firstModel = superset.first();
+      assert(firstModel.get('n') === 0);
+      superset.remove(firstModel);
+
+      // We should still have 6 pages
+      assert(paginated.getNumPages() === 6);
+
+      // The first page should now include models 1 - 30
+      var updated = paginated.pluck('n');
+      assert(_.isEqual(updated, _.range(1, 30)));
+      assert(paginated.length === 29);
+    });
+
+    it('should change the number of pages on remove', function() {
+
+      // 100 in collection
+      // 30 on infinite page
+      // = 1 infinite page + 4 full pages + 10 on last page = 6 pages
+      for (var i = 0; i < 9; i++) {
+        superset.remove(superset.last());
+        assert(paginated.getNumPages() === 6);
+      }
+
+      // Now removing one more should update us to only 5 pages
+      superset.remove(superset.last());
+      assert(paginated.getNumPages() === 5);
+    });
+
+    it('should change the number of pages on add', function() {
+
+      // 100 in collection
+      // 30 on infinite page
+      // = 1 infinite page + 4 full pages + 10 on last page = 6 pages
+      for (var i = 0; i < 5; i++) {
+        superset.add({ n: i });
+        assert(paginated.getNumPages() === 6);
+      }
+
+      // And adding one more should get us to 7
+      superset.add({ n: 100 });
+      assert(paginated.getNumPages() === 7);
+    });
+
+  });
+
 
 });
