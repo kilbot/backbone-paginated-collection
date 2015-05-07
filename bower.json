@@ -20,7 +20,8 @@
   "devDependencies": {
     "chai": "*",
     "backbone": ">=1.0.0",
-    "underscore": ">=1.5.1"
+    "underscore": ">=1.5.1",
+    "sinon-browser-only": "~1.12.1",
+    "sinon-chai": "~2.7.0"
   }
 }
-

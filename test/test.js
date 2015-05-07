@@ -1,4 +1,5 @@
 var assert = chai.assert;
+chai.should();
 
 describe('PaginatedCollection', function() {
 

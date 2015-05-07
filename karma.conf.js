@@ -10,6 +10,8 @@ module.exports = function(config) {
       'bower_components/backbone/backbone.js',
       'backbone-paginated-collection.js',
       'bower_components/chai/chai.js',
+      'bower_components/sinon-browser-only/sinon.js',
+      'bower_components/sinon-chai/lib/sinon-chai.js',
       'test/test.js'
     ],
 
