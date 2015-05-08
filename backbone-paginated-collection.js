@@ -16,8 +16,13 @@ var Backbone = require('backbone');
 var proxyCollection = require('backbone-collection-proxy');
 
 function getPageLimits() {
-  var start = this._infinitePage || this.getPage() * this.getPerPage();
-  var end = start + this.getPerPage();
+  if(this._infinite){
+    var start = 0;
+    var end = this._collection.length;
+  } else {
+    var start = this.getPage() * this.getPerPage();
+    var end = start + this.getPerPage();
+  }
   return [start, end];
 }
 
@@ -27,12 +32,22 @@ function updatePagination() {
 }
 
 function infintePagination() {
-  var pages = getPageLimits.call(this);
-  return this._collection.add(this.superset().slice(pages[0], pages[1]));
+  var start = 0;
+  var end = this._collection.length + this.getPerPage();
+  return this._collection.add(this.superset().slice(start, end));
+}
+
+function calcPages() {
+  var perPage = this.getPerPage();
+  var length = this.superset().length - this._collection.length;
+
+  var totalPages = length % perPage === 0 ?
+    (length / perPage) : Math.floor(length / perPage) + 1;
+
+  return totalPages + 1;
 }
 
 function updateNumPages() {
-  var currentNumPages = this._totalPages;
   var length = this.superset().length;
   var perPage = this.getPerPage();
 
@@ -59,7 +74,9 @@ function updateNumPages() {
 }
 
 function recalculatePagination() {
-  this._infinitePage = 0;
+  // reset infinite page
+  this._infinite = false;
+  
   if (updateNumPages.call(this)) { return; }
   updatePagination.call(this);
 }
@@ -89,10 +106,6 @@ function onAddRemove(model, collection, options) {
   var pages = getPageLimits.call(this);
   var start = pages[0], end = pages[1];
 
-  if(this._infinitePage > 0){
-    start = 0;
-  }
-
   // We are only adding and removing at most one model at a time,
   // so we can find just those two models. We could probably rewrite
   // `collectionDifference` to only make on pass instead of two. This
@@ -101,9 +114,9 @@ function onAddRemove(model, collection, options) {
   var toAdd = difference(this.superset().slice(start, end), this._collection.toArray());
   var toRemove = difference(this._collection.toArray(), this.superset().slice(start, end));
 
-  var test = this._infinitePage > 0 && options.add;
+  var infinite = this._infinite && options.add;
 
-  if (toRemove && !test) {
+  if (toRemove && !infinite) {
     this._collection.remove(toRemove);
   }
 
@@ -122,7 +135,6 @@ function Paginated(superset, options) {
   // set, and expose limited functionality.
   this._collection = new Backbone.Collection(superset.toArray());
   this._page = 0;
-  this._infinitePage = 0;
   this.setPerPage((options && options.perPage) ? options.perPage : null);
 
   proxyCollection(this._collection, this);
@@ -134,6 +146,7 @@ function Paginated(superset, options) {
 var methods = {
 
   removePagination: function() {
+    this._infinite = false;
     this.setPerPage(null);
     return this;
   },
@@ -152,6 +165,10 @@ var methods = {
   },
 
   setPage: function(page) {
+
+    // reset infinite page
+    this._infinite = false;
+
     // The lowest page we could set
     var lowerLimit = 0;
     // The highest page we could set
@@ -175,7 +192,11 @@ var methods = {
   },
 
   getNumPages: function() {
-    return this._totalPages - Math.floor(this._infinitePage/this.getPerPage());
+    if(this._infinite){
+      return calcPages.call(this);
+    } else {
+      return this._totalPages;
+    }
   },
 
   getPage: function() {
@@ -222,17 +243,16 @@ var methods = {
     this._collection.reset([]);
     this._superset = this._collection;
     this._page = 0;
-    this._infinitePage = 0;
     this._totalPages = 0;
     this.length = 0;
+    this._infinite = false;
 
     this.trigger('paginated:destroy');
   },
 
   // infinite scroll
   appendNextPage: function(){
-    this._infinitePage = this._collection.length;
-    this._page = 0;
+    this._infinite = true;
     infintePagination.call(this);
     this.trigger('paginated:change:page', { page: 0 });
     return this;

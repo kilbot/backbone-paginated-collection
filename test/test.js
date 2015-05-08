@@ -1022,19 +1022,30 @@ describe('PaginatedCollection', function() {
     });
 
     it('should append the next page of data', function(){
-      assert(paginated.length === 30);
-      assert(paginated.getPage() === 0);
-      assert(paginated.getNumPages() === 6);
 
-      // append another page
+      paginated.length.should.eql(30);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(6);
+
+      // keep appending pages
       paginated.appendNextPage();
-      assert(paginated.length === 45);
-      assert(paginated.getPage() === 0);
-      assert(paginated.getNumPages() === 5);
+      paginated.appendNextPage();
+      paginated.appendNextPage();
+      paginated.appendNextPage();
+      paginated.length.should.eql(90);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(2);
+
+      // append last page
+      paginated.appendNextPage();
+      paginated.length.should.eql(100);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql(1);
+
     });
 
     it('should update the current page if the model was there', function() {
-      // The first page should include models 0 - 14
+      // The first page should include models 0 - 29
       var current = paginated.pluck('n');
       current.should.eql(_.range(30));
       paginated.length.should.eql(30);
@@ -1045,7 +1056,7 @@ describe('PaginatedCollection', function() {
       // We should still have 6 pages
       paginated.getNumPages().should.eql(6);
 
-      // The first page should now include models -1 - 13
+      // The first page should now include models -1 - 29
       var updated = paginated.pluck('n');
       updated.should.eql(_.range(-1, 30));
       paginated.length.should.eql(31);
