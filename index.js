@@ -63,7 +63,7 @@ function updateNumPages() {
 function recalculatePagination() {
   // reset infinite page
   this._infinite = false;
-  
+
   if (updateNumPages.call(this)) { return; }
   updatePagination.call(this);
 }
@@ -99,11 +99,15 @@ function onAddRemove(model, collection, options) {
   // is a bottleneck on the total size of collections. I was getting
   // slow unit tests around 30,000 models / page in Firefox.
   var toAdd = difference(this.superset().slice(start, end), this._collection.toArray());
-  var toRemove = difference(this._collection.toArray(), this.superset().slice(start, end));
 
   var infinite = this._infinite && options.add;
+  var toRemove;
 
-  if (toRemove && !infinite) {
+  if(!infinite){
+    toRemove = difference(this._collection.toArray(), this.superset().slice(start, end));
+  }
+
+  if (toRemove) {
     this._collection.remove(toRemove);
   }
 
@@ -112,7 +116,7 @@ function onAddRemove(model, collection, options) {
       at: this.superset().indexOf(toAdd) - start
     });
   }
-}
+};
 
 function Paginated(superset, options) {
   // Save a reference to the original collection

@@ -43,11 +43,12 @@ module.exports = function (grunt) {
     simplemocha: {
       options: {
         globals: ['should'],
-        //timeout: 3000,
+        timeout: 3000,
         //ignoreLeaks: false,
         //grep: '*-test',
         //ui: 'bdd',
         reporter: 'spec'
+        //slow: 100 // doesn't work :(
       },
 
       all: {

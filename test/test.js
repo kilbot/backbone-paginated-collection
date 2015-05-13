@@ -1247,5 +1247,113 @@ describe('PaginatedCollection', function() {
 
   });
 
+  describe('large collections: 100,000', function(){
+
+    var size = 100000;
+    var perPage = 15;
+    var largeData = _.map(_.range(size), function(i) { return { n: i }; });
+
+    beforeEach(function() {
+      superset = new Backbone.Collection(largeData);
+      paginated = new PaginatedCollection(superset, { perPage: perPage });
+
+      // append a page
+      paginated.appendNextPage();
+    });
+
+    it('should append the next page of data', function(){
+
+      paginated.length.should.eql(30);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) );
+
+      // keep appending pages
+      paginated.appendNextPage(); //-1
+      paginated.appendNextPage(); //-1
+      paginated.appendNextPage(); //-1
+      paginated.appendNextPage(); //-1
+      paginated.length.should.eql(90);
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) - 4 );
+
+    });
+
+    it('should update the current page if the model was there', function() {
+      // The first page should include models 0 - 29
+      var current = paginated.pluck('n');
+      current.should.eql( _.range(30) );
+      paginated.length.should.eql(30);
+
+      var model = new Backbone.Model({ n: -1 });
+      superset.unshift(model);
+
+      // We should have same number of pages
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) );
+
+      // The first page should now include models -1 - 29
+      var updated = paginated.pluck('n');
+      updated.should.eql(_.range(-1, 30));
+      paginated.length.should.eql(31);
+    });
+
+    it('should remove a model from the infinite page', function() {
+      var current = paginated.pluck('n');
+      current.should.eql(_.range(30));
+      paginated.length.should.eql(30);
+
+      var firstModel = superset.first();
+      firstModel.get('n').should.eql(0);
+      superset.remove(firstModel);
+
+      // We should still have 6 pages
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) );
+
+      // The first page should now include models 1 - 29
+      var updated = paginated.pluck('n');
+      updated.should.eql(_.range(1, 31));
+      paginated.length.should.eql(30);
+    });
+
+    it('should change the number of pages on remove', function() {
+
+      for (var i = 0; i < 9; i++) {
+        superset.remove(superset.last());
+        paginated.getNumPages().should.eql( Math.floor(size/perPage) );
+      }
+
+      superset.remove(superset.last());
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) - 1 );
+    });
+
+    it('should change the number of pages on add', function() {
+
+      for (var i = 0; i < 5; i++) {
+        superset.add({ n: i });
+        paginated.getNumPages().should.eql( Math.floor(size/perPage) );
+      }
+
+      superset.add({ n: 1000000 });
+      paginated.getNumPages().should.eql( Math.floor(size/perPage) + 1 );
+    });
+
+    it('reseting the superset should update everything', function() {
+      var newData = _.map(_.range(size, size + size/2), function(i) { return { n: i }; });
+
+      superset.reset(newData);
+
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql( Math.floor(size/(perPage*2)) + 1 );
+      paginated.length.should.eql( 15 );
+
+      paginated.appendNextPage();
+
+      paginated.getPage().should.eql(0);
+      paginated.getNumPages().should.eql( Math.floor(size/(perPage*2)) );
+      paginated.length.should.eql(30);
+
+    });
+
+  });
+
 
 });
